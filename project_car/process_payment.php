@@ -1,7 +1,5 @@
 <?php
 session_start();
-
-// Include your database connection code here
 require_once('DBconnect.php');
 
 // Check if the driver is logged in, redirect to the login page if not
@@ -46,10 +44,9 @@ $parkingLot = mysqli_fetch_assoc($resultParkingLot);
 // Calculate payment amount
 $start_time = strtotime($booking['start_time']);
 $end_time = strtotime($booking['end_time']);
-$current_time = time();
+$current_time = strtotime($booking['time']);
 $time_difference = ceil(($end_time - $start_time) / 3600); // Calculate time difference from current time to end time in hours
 $payment_amount = 50 * $time_difference;
-
 
 // Insert payment details into the payment table
 $payment_method = $_POST['payment_method'] ?? null;
@@ -62,6 +59,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $payment_method) {
     $insertPaymentResult = mysqli_query($conn, $insertPaymentQuery);
 
     if ($insertPaymentResult) {
+        // Decrease space_availability when real time equals start_time
+        if ($current_time >= $start_time) {
+            $updateAvailabilityQuery = "UPDATE parkinglot SET space_availability = space_availability - 1 WHERE parking_lot_id = $parking_lot_id";
+            $updateAvailabilityResult = mysqli_query($conn, $updateAvailabilityQuery);
+
+            if (!$updateAvailabilityResult) {
+                die("Error updating space availability: " . mysqli_error($conn));
+            }
+        }
+
         // Redirect to the appropriate page based on the payment method
         if ($payment_method === 'online') {
             header("Location: https://www.bkash.com");
@@ -71,6 +78,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $payment_method) {
         exit();
     } else {
         die("Error inserting payment data: " . mysqli_error($conn));
+    }
+} else {
+    // Increase space_availability when real time equals end_time
+    if ($current_time >= $end_time) {
+        $updateAvailabilityQuery = "UPDATE parkinglot SET space_availability = space_availability + 1 WHERE parking_lot_id = $parking_lot_id";
+        $updateAvailabilityResult = mysqli_query($conn, $updateAvailabilityQuery);
+
+        if (!$updateAvailabilityResult) {
+            die("Error updating space availability: " . mysqli_error($conn));
+        }
     }
 }
 ?>
@@ -140,8 +157,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $payment_method) {
 </style>
 
 </head>
-
 <body>
+
 <div class="payment-details-container">
     <h2>Payment Details</h2>
 
@@ -181,5 +198,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $payment_method) {
         </form>
     </div>
 </div>
+
 </body>
 </html>
