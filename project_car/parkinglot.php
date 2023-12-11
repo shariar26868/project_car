@@ -53,12 +53,15 @@ if (isset($_GET['delete_parking_lot_id'])) {
     exit();
 }
 
-// Fetch all parking lot details from the database using parking_owner_id
-$sql = "SELECT * FROM parkinglot WHERE parking_owner_id = $parking_owner_id";
+// Fetch all parking lot details and reviews from the database using parking_owner_id
+$sql = "SELECT parkinglot.*, review.review_text, review.rating, review.date_submitted
+        FROM parkinglot
+        LEFT JOIN review ON parkinglot.parking_lot_id = review.parking_lot_id
+        WHERE parkinglot.parking_owner_id = $parking_owner_id";
 $result = mysqli_query($conn, $sql);
 
 if (!$result) {
-    die("Error fetching parking lot details: " . mysqli_error($conn));
+    die("Error fetching parking lot details and reviews: " . mysqli_error($conn));
 }
 ?>
 
@@ -78,13 +81,16 @@ if (!$result) {
 
         .parking-lot-container {
             display: flex;
+            flex-wrap: wrap; /* Allow items to wrap to the next line */
             justify-content: space-between;
             margin: 20px;
         }
 
         .parking-lot-details,
+        .review-container,
         .add-parking-lot-form {
             width: 45%;
+            margin-bottom: 20px; /* Add margin between pairs */
             padding: 20px;
             border: 1px solid #ccc;
             border-radius: 8px;
@@ -138,7 +144,7 @@ if (!$result) {
         }
 
         .delete-button {
-            background-color: #ff0000; /* Red button */
+            background-color: #ff0000;
             color: #fff;
             border: none;
             padding: 5px;
@@ -148,42 +154,62 @@ if (!$result) {
         }
 
         .delete-button:hover {
-            background-color: #cc0000; /* Darker red on hover */
+            background-color: #cc0000;
+        }
+
+        .review-container {
+            margin-left: 10px; /* Add some space between parking lot info and review info */
         }
     </style>
 </head>
 <body>
 
 <div class="parking-lot-container">
-    <div class="parking-lot-details">
-        <h2>Parking Lot Details</h2>
-        <?php
-        // Display existing parking lots
-        while ($row = mysqli_fetch_assoc($result)) {
-            echo "<div><strong>Address:</strong> <span class='existing-info'>{$row['address']}</span></div>";
-            echo "<div><strong>Capacity:</strong> <span class='existing-info'>{$row['capacity']}</span></div>";
-            echo "<div><strong>Space Availability:</strong> <span class='existing-info'>{$row['space_availability']}</span></div>";
-            echo "<div><strong>Parking Lot ID:</strong> <span class='existing-info'>{$row['parking_lot_id']}</span></div>";
+    <?php
+    // Display parking lot details
+    while ($row = mysqli_fetch_assoc($result)) {
+        echo "<div class='parking-lot-details'>";
+        echo "<h2>Parking Lot Details</h2>";
+        echo "<div><strong>Address:</strong> <span class='existing-info'>{$row['address']}</span></div>";
+        echo "<div><strong>Capacity:</strong> <span class='existing-info'>{$row['capacity']}</span></div>";
+        echo "<div><strong>Space Availability:</strong> <span class='existing-info'>{$row['space_availability']}</span></div>";
+        echo "<div><strong>Parking Lot ID:</strong> <span class='existing-info'>{$row['parking_lot_id']}</span></div>";
 
-            // Delete button for each parking lot
-            echo "<a class='delete-button' href='?parking_owner_id=$parking_owner_id&delete_parking_lot_id={$row['parking_lot_id']}'>Delete</a>";
+        // Delete button for each parking lot
+        echo "<a class='delete-button' href='?parking_owner_id=$parking_owner_id&delete_parking_lot_id={$row['parking_lot_id']}'>Delete</a>";
 
-            echo "<hr>";
+        echo "<hr>";
+        echo "</div>";
+
+        // Display reviews
+        echo "<div class='review-container'>";
+        echo "<h2>Reviews</h2>";
+
+        if ($row['review_text'] !== null) {
+            echo "<p><strong>Review Text:</strong> {$row['review_text']}</p>";
+            echo "<p><strong>Rating:</strong> {$row['rating']}</p>";
+            echo "<p><strong>Date Submitted:</strong> {$row['date_submitted']}</p>";
+        } else {
+            echo "<p>No reviews available for this parking lot.</p>";
         }
-        ?>
-    </div>
 
-    <div class="add-parking-lot-form">
-    <h2>Add New Parking Lot</h2>
-        <form action="parkinglot.php?parking_owner_id=<?php echo $parking_owner_id; ?>" method="post">
-            Address: <input type="text" name="newAddress" required><br>
-            Capacity: <input type="number" name="newCapacity" required><br>
-            Space Availability: <input type="number" name="newSpaceAvailability" required><br>
-            <input type="submit" value="Add Parking Lot">
-        </form>
-    </div>
+        echo "</div>";
+    }
+    ?>
 </div>
 
+<div class="add-parking-lot-form">
+    <h2>Add New Parking Lot</h2>
+    <form action="parkinglot.php?parking_owner_id=<?php echo $parking_owner_id; ?>" method="post">
+        Address: <input type="text" name="newAddress" required><br>
+        Capacity: <input type="number" name="newCapacity" required><br>
+        Space Availability: <input type="number" name="newSpaceAvailability" required><br>
+        <input type="submit" value="Add Parking Lot">
+    </form>
+</div>
+
+<!-- ... (Your existing HTML structure) -->
 
 </body>
 </html>
+
